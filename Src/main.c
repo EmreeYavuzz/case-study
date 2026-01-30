@@ -107,6 +107,26 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  // WHO_AM_I Test
+  uint8_t whoami_addr = 0x8F;  // 0x80 (READ) | 0x0F (WHO_AM_I register)
+  uint8_t whoami_value = 0x00;
+
+
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
+
+
+  HAL_SPI_Transmit(&hspi5, &whoami_addr, 1, 100);
+  HAL_SPI_Receive(&hspi5, &whoami_value, 1, 100);
+
+
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+
+  if (whoami_value == 0xD3) {
+    __NOP();
+  } else {
+    __NOP();
+  }
+
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in cmsis_os2.c) */
