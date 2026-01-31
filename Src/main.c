@@ -17,6 +17,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 #include "cmsis_os.h"
 #include "crc.h"
@@ -32,7 +33,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "i3g4250d_reg.h"
+#include "i3g4250d_platform.h"
+#include <stdio.h>  
+#include <string.h>  
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,17 +58,71 @@
 
 /* USER CODE BEGIN PV */
 
+// Gyroscope context
+static stmdev_ctx_t gyro_ctx;
+// Test değişkenleri
+static uint8_t whoami_id = 0;
+static int16_t gyro_data[3] = {0};  // X, Y, Z (raw değerler)
+static float gyro_dps[3] = {0};     // X, Y, Z (derece/saniye)
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
-/* USER CODE BEGIN PFP */
 
+/* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+
+/**
+  * @brief  Initialize gyroscope
+  * @retval 0: OK, -1: Error
+  */
+static int32_t gyro_init(void)
+{
+  int32_t ret;
+  
+  // 1. WHO_AM_I kontrolü
+  ret = i3g4250d_device_id_get(&gyro_ctx, &whoami_id);
+  if (ret != 0) {
+    return -1;  // SPI hatası
+  }
+  
+  if (whoami_id != I3G4250D_ID) {
+    return -2;  // Yanlış cihaz
+  }
+  
+  // 2. Power-on, 100 Hz ODR, all axes enable
+  ret = i3g4250d_data_rate_set(&gyro_ctx, I3G4250D_ODR_100Hz);
+  if (ret != 0) {
+    return -3;
+  }
+  
+  // 3. Full-scale: ±245 dps
+  ret = i3g4250d_full_scale_set(&gyro_ctx, I3G4250D_245dps);
+  if (ret != 0) {
+    return -4;
+  }
+  
+  // 4. Kısa delay (sensör boot için)
+  gyro_ctx.mdelay(100);
+  
+  return 0;  // Başarılı
+}
+
+/**
+  * @brief  Read gyroscope angular rate
+  * @param  data  Pointer to 3x int16_t array [X, Y, Z]
+  * @retval 0: OK, -1: Error
+  */
+static int32_t gyro_read(int16_t *data)
+{
+  return i3g4250d_angular_rate_raw_get(&gyro_ctx, data);
+}
 
 /* USER CODE END 0 */
 
@@ -102,32 +160,54 @@ int main(void)
   MX_FMC_Init();
   MX_I2C3_Init();
   MX_LTDC_Init();
-  MX_SPI5_Init();
+  MX_SPI5_Init();  
   MX_TIM1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  // WHO_AM_I Test
-  uint8_t whoami_addr = 0x8F;  // 0x80 (READ) | 0x0F (WHO_AM_I register)
-  uint8_t whoami_value = 0x00;
+  // Platform layer'ı başlat
+  i3g4250d_platform_init(&gyro_ctx, &hspi5);
 
+  // Gyroscope başlat
+  int32_t status = gyro_init();
 
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
+  if (status == 0) {
+    // ✅ Platform-agnostic LED control
+    i3g4250d_platform_led_on(0);  // Green LED
+    
+    // ✅ Platform-agnostic print
+    i3g4250d_platform_print("\r\n=== GYROSCOPE INITIALIZED ===\r\n");
+    
+    char msg[100];
+    sprintf(msg, "WHO_AM_I: 0x%02X (OK)\r\n\r\n", whoami_id);
+    i3g4250d_platform_print(msg);
+    
+    while(1) {
+      gyro_read(gyro_data);
+      
+      gyro_dps[0] = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]) / 1000.0f;
+      gyro_dps[1] = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]) / 1000.0f;
+      gyro_dps[2] = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]) / 1000.0f;
+      
+      int x_int = (int)(gyro_dps[0] * 100);
+      int y_int = (int)(gyro_dps[1] * 100);
+      int z_int = (int)(gyro_dps[2] * 100);
 
-
-  HAL_SPI_Transmit(&hspi5, &whoami_addr, 1, 100);
-  HAL_SPI_Receive(&hspi5, &whoami_value, 1, 100);
-
-
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
-
-  if (whoami_value == 0xD3) {
-    __NOP();
-  } else {
-    __NOP();
+      sprintf(msg, "X:%4d.%02d  Y:%4d.%02d  Z:%4d.%02d DPS\r\n",
+              x_int/100, x_int%100,
+              y_int/100, y_int%100,
+              z_int/100, z_int%100);
+      i3g4250d_platform_print(msg);
+      
+      i3g4250d_platform_delay(200);
+    }
+  } else {  // ❌ Error
+    i3g4250d_platform_led_on(1);  // Red LED
+    while(1);
   }
 
   /* USER CODE END 2 */
+
 
   /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
@@ -194,6 +274,16 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+
+// Printf SWV için redirect
+int _write(int file, char *ptr, int len)
+{
+  for(int i = 0; i < len; i++) {
+    ITM_SendChar((*ptr++));
+  }
+  return len;
+}
 
 /* USER CODE END 4 */
 
