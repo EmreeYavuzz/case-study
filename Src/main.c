@@ -123,8 +123,6 @@ void i3g4250d_platform_print(const char *msg)
   HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 }
 
-
-
 /**
   * @brief  Initialize gyroscope
   * @retval 0: OK, -1: Error
@@ -203,12 +201,21 @@ static int32_t gyro_self_test(void)
   int16_t normal_data[3] = {0};
   int16_t selftest_data[3] = {0};
   int16_t diff_x, diff_y, diff_z;
+  i3g4250d_st_t mode;
   char msg[100];
   
   i3g4250d_platform_print("\r\n--- SELF-TEST START ---\r\n");
   
   // 1. Read normal mode (self-test OFF)
   i3g4250d_self_test_set(&gyro_ctx, I3G4250D_GY_ST_DISABLE);
+
+  // 2. Gerçekten aktif oldu mu kontrol et (SPI doğrulama)
+  i3g4250d_self_test_get(&gyro_ctx, &mode);
+  if (mode != I3G4250D_GY_ST_DISABLE) {
+    i3g4250d_platform_print("ERROR: Self-test activation failed\r\n");
+    return -1;
+  }
+
   gyro_ctx.mdelay(100);
   
   gyro_read(normal_data);
@@ -218,6 +225,14 @@ static int32_t gyro_self_test(void)
   
   // 2. Read self-test mode (positive actuation)
   i3g4250d_self_test_set(&gyro_ctx, I3G4250D_GY_ST_POSITIVE);
+
+  // 2. Gerçekten aktif oldu mu kontrol et (SPI doğrulama)
+  i3g4250d_self_test_get(&gyro_ctx, &mode);
+  if (mode != I3G4250D_GY_ST_POSITIVE) {
+    i3g4250d_platform_print("ERROR: Self-test activation failed\r\n");
+    return -1;
+  }
+
   gyro_ctx.mdelay(100);
   
   gyro_read(selftest_data);

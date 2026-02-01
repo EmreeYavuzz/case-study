@@ -433,11 +433,6 @@ int32_t i3g4250d_self_test_get(const stmdev_ctx_t *ctx, i3g4250d_st_t *val)
 
 
 
-
-
-
-
-
 /**
   * @brief  Big/Little Endian data selection.[set]
   *
