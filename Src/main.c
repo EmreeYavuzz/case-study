@@ -838,7 +838,7 @@ static gyro_error_t gyro_test_temperature(void)
 {
   char msg[80];
   uint8_t temp_raw_val;
-  float temp_c;
+  int temp_c;
   
   i3g4250d_platform_print("\r\n--- TEMPERATURE TEST ---\r\n");
   
@@ -850,7 +850,7 @@ static gyro_error_t gyro_test_temperature(void)
     
     temp_c = i3g4250d_from_lsb_to_celsius((int8_t)temp_raw_val);
     
-    sprintf(msg, "Temp Sample %d: Raw=%d -> %.1f C\r\n", 
+    sprintf(msg, "Temp Sample %d: Raw=%d -> %d C\r\n",
             i+1, (int8_t)temp_raw_val, temp_c);
     i3g4250d_platform_print(msg);
     

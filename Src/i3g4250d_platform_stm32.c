@@ -44,7 +44,20 @@ static i3g4250d_state_t g_driver_state = {0};
 static i3g4250d_drdy_callback_t g_drdy_callback = NULL;
 static void *g_drdy_user_data = NULL;
 
-void i3g4250d_platform_delay(uint32_t ms);
+
+
+/* ============================================================================
+ * UTILITY FUNCTIONS
+ * ============================================================================ */
+
+/**
+ * @brief  Platform delay function
+ * @param  ms  Milliseconds to delay
+ */
+void i3g4250d_platform_delay(uint32_t ms)
+{
+  HAL_Delay(ms);
+}
 
 /* ============================================================================
  * PLATFORM INITIALIZATION
@@ -89,18 +102,6 @@ int32_t i3g4250d_platform_init(stmdev_ctx_t *ctx, void *spi_handle)
 }
 
 
-/* ============================================================================
- * UTILITY FUNCTIONS
- * ============================================================================ */
-
-/**
- * @brief  Platform delay function
- * @param  ms  Milliseconds to delay
- */
-void i3g4250d_platform_delay(uint32_t ms)
-{
-  HAL_Delay(ms);
-}
 
 /* ============================================================================
  * STATE MANAGEMENT FUNCTIONS

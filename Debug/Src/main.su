@@ -15,7 +15,7 @@
 ../Src/main.c:705:21:gyro_test_fifo	144	static
 ../Src/main.c:773:21:gyro_test_data_format	96	static
 ../Src/main.c:806:21:gyro_test_boot	96	static
-../Src/main.c:837:21:gyro_test_temperature	120	static
+../Src/main.c:837:21:gyro_test_temperature	112	static
 ../Src/main.c:869:21:gyro_test_spi_mode	96	static
 ../Src/main.c:899:21:gyro_test_filter_path	176	static
 ../Src/main.c:950:21:gyro_test_hp_reference	104	static
