@@ -1511,6 +1511,134 @@ int32_t i3g4250d_int_on_threshold_dur_get(const stmdev_ctx_t *ctx,
 }
 
 /**
+  * @brief  Interrupt duration with explicit WAIT control (extended version)
+  *
+  * @param  ctx         Read / write interface definitions.(ptr)
+  * @param  duration    Duration value (D[6:0], 0-127)
+  * @param  wait_enable WAIT bit: PROPERTY_DISABLE (0) or PROPERTY_ENABLE (1)
+  * @retval             Interface status (MANDATORY: return 0 -> no Error)
+  *
+  * @note   This function allows explicit control of WAIT bit
+  *         WAIT=0: Interrupt falls immediately when condition ends
+  *         WAIT=1: Interrupt falls after duration samples counted
+  */
+int32_t i3g4250d_int_on_threshold_dur_set_ex(const stmdev_ctx_t *ctx,
+                                              uint8_t duration,
+                                              uint8_t wait_enable)
+{
+  uint8_t int1_duration;
+  int32_t ret;
+
+  /* Validate duration (7-bit value, max 127) */
+  if (duration > 0x7FU) {
+    return -1;
+  }
+
+  ret = i3g4250d_read_reg(ctx, I3G4250D_INT1_DURATION, &int1_duration, 1);
+  if (ret != 0) { return ret; }
+
+  /* Clear D field (bits 6:0) and WAIT bit (bit 7) */
+  int1_duration = 0;
+
+  /* Set duration value */
+  int1_duration |= FIELD_PREP(I3G4250D_INT1_DURATION_D_MASK, 
+                                I3G4250D_INT1_DURATION_D_POS, 
+                                duration);
+
+  /* Set WAIT bit based on parameter */
+  if (wait_enable != 0U) {
+    int1_duration |= I3G4250D_INT1_DURATION_WAIT_BIT;
+  }
+
+  ret = i3g4250d_write_reg(ctx, I3G4250D_INT1_DURATION, &int1_duration, 1);
+
+  return ret;
+}
+
+/**
+  * @brief  Get interrupt duration and WAIT status (extended version)
+  *
+  * @param  ctx         Read / write interface definitions.(ptr)
+  * @param  duration    Duration value (D[6:0]) - can be NULL
+  * @param  wait_enable WAIT bit status - can be NULL
+  * @retval             Interface status (MANDATORY: return 0 -> no Error)
+  *
+  */
+int32_t i3g4250d_int_on_threshold_dur_get_ex(const stmdev_ctx_t *ctx,
+                                              uint8_t *duration,
+                                              uint8_t *wait_enable)
+{
+  uint8_t int1_duration;
+  int32_t ret;
+
+  ret = i3g4250d_read_reg(ctx, I3G4250D_INT1_DURATION, &int1_duration, 1);
+  if (ret != 0) { return ret; }
+
+  /* Get duration value if requested */
+  if (duration != NULL) {
+    *duration = FIELD_GET(I3G4250D_INT1_DURATION_D_MASK, 
+                          I3G4250D_INT1_DURATION_D_POS, 
+                          int1_duration);
+  }
+
+  /* Get WAIT bit if requested */
+  if (wait_enable != NULL) {
+    *wait_enable = (int1_duration & I3G4250D_INT1_DURATION_WAIT_BIT) ? 1U : 0U;
+  }
+
+  return ret;
+}
+
+/**
+  * @brief  Set WAIT bit only (preserve duration value)
+  *
+  * @param  ctx  Read / write interface definitions.(ptr)
+  * @param  val  PROPERTY_DISABLE (0) or PROPERTY_ENABLE (1)
+  * @retval      Interface status (MANDATORY: return 0 -> no Error)
+  *
+  */
+int32_t i3g4250d_int_wait_enable_set(const stmdev_ctx_t *ctx, uint8_t val)
+{
+  uint8_t int1_duration;
+  int32_t ret;
+
+  ret = i3g4250d_read_reg(ctx, I3G4250D_INT1_DURATION, &int1_duration, 1);
+  if (ret != 0) { return ret; }
+
+  /* Modify only WAIT bit (bit 7) */
+  if (val != 0U) {
+    int1_duration |= I3G4250D_INT1_DURATION_WAIT_BIT;
+  } else {
+    int1_duration &= ~I3G4250D_INT1_DURATION_WAIT_BIT;
+  }
+
+  ret = i3g4250d_write_reg(ctx, I3G4250D_INT1_DURATION, &int1_duration, 1);
+
+  return ret;
+}
+
+/**
+  * @brief  Get WAIT bit status
+  *
+  * @param  ctx  Read / write interface definitions.(ptr)
+  * @param  val  WAIT bit value (0 or 1).(ptr)
+  * @retval      Interface status (MANDATORY: return 0 -> no Error)
+  *
+  */
+int32_t i3g4250d_int_wait_enable_get(const stmdev_ctx_t *ctx, uint8_t *val)
+{
+  uint8_t int1_duration;
+  int32_t ret;
+
+  ret = i3g4250d_read_reg(ctx, I3G4250D_INT1_DURATION, &int1_duration, 1);
+  if (ret != 0) { return ret; }
+
+  *val = (int1_duration & I3G4250D_INT1_DURATION_WAIT_BIT) ? 1U : 0U;
+
+  return ret;
+}
+
+/**
   * @}
   *
   */

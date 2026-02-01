@@ -1,4 +1,9 @@
-../Src/i3g4250d_platform_stm32.c:10:9:i3g4250d_platform_init	1
-../Src/i3g4250d_platform_stm32.c:26:9:i3g4250d_platform_read	4
-../Src/i3g4250d_platform_stm32.c:61:9:i3g4250d_platform_write	4
-../Src/i3g4250d_platform_stm32.c:89:6:i3g4250d_platform_delay	1
+../Src/i3g4250d_platform_stm32.c:65:9:i3g4250d_platform_init	3
+../Src/i3g4250d_platform_stm32.c:100:6:i3g4250d_platform_delay	1
+../Src/i3g4250d_platform_stm32.c:113:19:i3g4250d_platform_get_state	1
+../Src/i3g4250d_platform_stm32.c:123:6:i3g4250d_platform_set_initialized	1
+../Src/i3g4250d_platform_stm32.c:135:9:i3g4250d_platform_is_initialized	1
+../Src/i3g4250d_platform_stm32.c:150:6:i3g4250d_platform_set_drdy_callback	2
+../Src/i3g4250d_platform_stm32.c:175:6:i3g4250d_platform_drdy_irq_handler	3
+../Src/i3g4250d_platform_stm32.c:214:9:i3g4250d_platform_read	5
+../Src/i3g4250d_platform_stm32.c:263:9:i3g4250d_platform_write	4

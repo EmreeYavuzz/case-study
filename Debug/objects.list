@@ -51,6 +51,7 @@
 "./Src/freertos.o"
 "./Src/gpio.o"
 "./Src/i2c.o"
+"./Src/i3g4250d_mock.o"
 "./Src/i3g4250d_platform_stm32.o"
 "./Src/i3g4250d_reg.o"
 "./Src/ltdc.o"

@@ -615,7 +615,6 @@ typedef uint8_t i3g4250d_int1_src_t;
 
 
 
-
 /**
   * @note  Bitfield structures have been removed in favor of mask-based
   *        register access for better portability and MISRA-C compliance.
@@ -881,10 +880,56 @@ int32_t i3g4250d_int_y_threshold_get(const stmdev_ctx_t *ctx, uint16_t *val);
 int32_t i3g4250d_int_z_threshold_set(const stmdev_ctx_t *ctx, uint16_t val);
 int32_t i3g4250d_int_z_threshold_get(const stmdev_ctx_t *ctx, uint16_t *val);
 
+/**
+ * @brief  Interrupt duration and WAIT configuration
+ * @note   Original function - auto-enables WAIT when duration > 0
+ */
 int32_t i3g4250d_int_on_threshold_dur_set(const stmdev_ctx_t *ctx,
                                           uint8_t val);
 int32_t i3g4250d_int_on_threshold_dur_get(const stmdev_ctx_t *ctx,
                                           uint8_t *val);
+
+/**
+ * @brief  Interrupt duration with explicit WAIT control
+ * @param  ctx         Read/write interface definitions
+ * @param  duration    Duration value (D[6:0], 0-127)
+ * @param  wait_enable WAIT bit: PROPERTY_DISABLE (0) or PROPERTY_ENABLE (1)
+ * @retval 0: OK, -1: Error
+ * 
+ * @note   WAIT bit meaning (from datasheet Figure 19-20):
+ *         - WAIT=0: Interrupt falls immediately when signal crosses threshold
+ *         - WAIT=1: Interrupt falls only after duration samples counted
+ */
+int32_t i3g4250d_int_on_threshold_dur_set_ex(const stmdev_ctx_t *ctx,
+                                              uint8_t duration,
+                                              uint8_t wait_enable);
+
+/**
+ * @brief  Get interrupt duration and WAIT status
+ * @param  ctx         Read/write interface definitions
+ * @param  duration    Duration value (D[6:0]) - can be NULL
+ * @param  wait_enable WAIT bit status - can be NULL
+ * @retval 0: OK, -1: Error
+ */
+int32_t i3g4250d_int_on_threshold_dur_get_ex(const stmdev_ctx_t *ctx,
+                                              uint8_t *duration,
+                                              uint8_t *wait_enable);
+
+/**
+ * @brief  Set WAIT bit only (preserve duration value)
+ * @param  ctx  Read/write interface definitions
+ * @param  val  PROPERTY_DISABLE (0) or PROPERTY_ENABLE (1)
+ * @retval 0: OK, -1: Error
+ */
+int32_t i3g4250d_int_wait_enable_set(const stmdev_ctx_t *ctx, uint8_t val);
+
+/**
+ * @brief  Get WAIT bit status
+ * @param  ctx  Read/write interface definitions
+ * @param  val  WAIT bit value (0 or 1)
+ * @retval 0: OK, -1: Error
+ */
+int32_t i3g4250d_int_wait_enable_get(const stmdev_ctx_t *ctx, uint8_t *val);
 
 int32_t i3g4250d_fifo_enable_set(const stmdev_ctx_t *ctx, uint8_t val);
 int32_t i3g4250d_fifo_enable_get(const stmdev_ctx_t *ctx, uint8_t *val);
