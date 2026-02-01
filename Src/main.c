@@ -51,6 +51,9 @@
 #define LED_GREEN_PIN  GPIO_PIN_13
 #define LED_RED_PORT   GPIOG
 #define LED_RED_PIN    GPIO_PIN_14
+// Self-test limits for ±245 dps: 130 dps ± %20 tolerance
+#define SELF_TEST_MIN_LSB 10400  // ~91 dps (130 - 30%)
+#define SELF_TEST_MAX_LSB 18600  // ~163 dps (130 + 30%)
 
 // UART handle (external)
 extern UART_HandleTypeDef huart1;
@@ -71,9 +74,8 @@ static stmdev_ctx_t gyro_ctx;
 // Test değişkenleri
 static uint8_t whoami_id = 0;
 static int16_t gyro_data[3] = {0};   // X, Y, Z (raw değerler)
-static float gyro_dps[3] = {0};      // X, Y, Z (derece/saniye)
-static uint8_t temp_raw = 0;         // Ham sıcaklık değeri
-static float temp_celsius = 0.0f;    // Sıcaklık (°C)
+static uint8_t temp_raw = 0;         // Ham sicaklik değeri
+static float temp_celsius = 0.0f;    // Sicaklik (°C)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,76 +87,6 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-
-/**
-  * @brief  Initialize gyroscope
-  * @retval 0: OK, -1: Error
-  */
-static int32_t gyro_init(void)
-{
-  int32_t ret;
-  
-  // 1. WHO_AM_I kontrolü
-  ret = i3g4250d_device_id_get(&gyro_ctx, &whoami_id);
-  if (ret != 0) {
-    return -1;  // SPI hatası
-  }
-  
-  if (whoami_id != I3G4250D_ID) {
-    return -2;  // Yanlış cihaz
-  }
-  
-  // 2. Power-on mode (PD bit = 1) -
-  
-  ret = i3g4250d_power_mode_set(&gyro_ctx, PROPERTY_ENABLE);
-  if (ret != 0) {
-    return -3;
-  }
-  // 3. Enable all axes (X, Y, Z)
-  ret = i3g4250d_axis_x_data_set(&gyro_ctx, PROPERTY_ENABLE);
-  if (ret != 0) { return -4; }
-  
-  ret = i3g4250d_axis_y_data_set(&gyro_ctx, PROPERTY_ENABLE);
-  if (ret != 0) { return -5; }
-  
-  ret = i3g4250d_axis_z_data_set(&gyro_ctx, PROPERTY_ENABLE);
-  if (ret != 0) { return -6; }
-  
-  // 4. Output data rate: 100 Hz
-  ret = i3g4250d_data_rate_set(&gyro_ctx, I3G4250D_ODR_100Hz);
-  if (ret != 0) {
-    return -7;
-  }
-  
-  // 5. Full-scale: ±245 dps
-  ret = i3g4250d_full_scale_set(&gyro_ctx, I3G4250D_245dps);
-  if (ret != 0) {
-    return -8;
-  }
-  
-  // 7. Test: Sıcaklık oku (opsiyonel)
-  ret = i3g4250d_temperature_raw_get(&gyro_ctx, &temp_raw);
-  if (ret != 0) {
-    return -9;  // Sıcaklık okuma hatası
-  }
-
-  // 6. Kısa delay (sensör boot için)
-  gyro_ctx.mdelay(100);
-  
-  return 0;  // Başarılı
-}
-
-/**
-  * @brief  Read gyroscope angular rate
-  * @param  data  Pointer to 3x int16_t array [X, Y, Z]
-  * @retval 0: OK, -1: Error
-  */
-static int32_t gyro_read(int16_t *data)
-{
-  return i3g4250d_angular_rate_raw_get(&gyro_ctx, data);
-}
-
 
 /**
  * @brief  Turn on LED
@@ -190,6 +122,137 @@ void i3g4250d_platform_print(const char *msg)
 {
   HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 }
+
+
+
+/**
+  * @brief  Initialize gyroscope
+  * @retval 0: OK, -1: Error
+  */
+static int32_t gyro_init(void)
+{
+  int32_t ret;
+  
+  // 1. WHO_AM_I kontrolü
+  ret = i3g4250d_device_id_get(&gyro_ctx, &whoami_id);
+  if (ret != 0) {
+    return -1;  // SPI hatasi
+  }
+  
+  if (whoami_id != I3G4250D_ID) {
+    return -2;  // Yanliş cihaz
+  }
+  
+  // 2. Power-on mode (PD bit = 1) -
+  
+  ret = i3g4250d_power_mode_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) {
+    return -3;
+  }
+  // 3. Enable all axes (X, Y, Z)
+  ret = i3g4250d_axis_x_data_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) { return -4; }
+  
+  ret = i3g4250d_axis_y_data_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) { return -5; }
+  
+  ret = i3g4250d_axis_z_data_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) { return -6; }
+  
+  // 4. Output data rate: 100 Hz
+  ret = i3g4250d_data_rate_set(&gyro_ctx, I3G4250D_ODR_100Hz);
+  if (ret != 0) {
+    return -7;
+  }
+  
+  // 5. Full-scale: ±245 dps
+  ret = i3g4250d_full_scale_set(&gyro_ctx, I3G4250D_245dps);
+  if (ret != 0) {
+    return -8;
+  }
+  
+  // 6. Test: Sicaklik oku (opsiyonel)
+  ret = i3g4250d_temperature_raw_get(&gyro_ctx, &temp_raw);
+  if (ret != 0) {
+    return -9;  // Sicaklik okuma hatasi
+  }
+
+
+  // 7. Kisa delay (sensör boot için)
+  gyro_ctx.mdelay(100);
+  
+  return 0;  // Basarili
+}
+
+/**
+  * @brief  Read gyroscope angular rate
+  * @param  data  Pointer to 3x int16_t array [X, Y, Z]
+  * @retval 0: OK, -1: Error
+  */
+static int32_t gyro_read(int16_t *data)
+{
+  return i3g4250d_angular_rate_raw_get(&gyro_ctx, data);
+}
+
+/**
+  * @brief  Gyroscope self-test procedure
+  * @retval 0: OK (sensor healthy), -1: FAIL (sensor faulty)
+  */
+static int32_t gyro_self_test(void)
+{
+  int16_t normal_data[3] = {0};
+  int16_t selftest_data[3] = {0};
+  int16_t diff_x, diff_y, diff_z;
+  char msg[100];
+  
+  i3g4250d_platform_print("\r\n--- SELF-TEST START ---\r\n");
+  
+  // 1. Read normal mode (self-test OFF)
+  i3g4250d_self_test_set(&gyro_ctx, I3G4250D_GY_ST_DISABLE);
+  gyro_ctx.mdelay(100);
+  
+  gyro_read(normal_data);
+  sprintf(msg, "Normal mode: X=%d Y=%d Z=%d\r\n", 
+          normal_data[0], normal_data[1], normal_data[2]);
+  i3g4250d_platform_print(msg);
+  
+  // 2. Read self-test mode (positive actuation)
+  i3g4250d_self_test_set(&gyro_ctx, I3G4250D_GY_ST_POSITIVE);
+  gyro_ctx.mdelay(100);
+  
+  gyro_read(selftest_data);
+  sprintf(msg, "Self-test mode: X=%d Y=%d Z=%d\r\n", 
+          selftest_data[0], selftest_data[1], selftest_data[2]);
+  i3g4250d_platform_print(msg);
+  
+  // 3. Disable self-test
+  i3g4250d_self_test_set(&gyro_ctx, I3G4250D_GY_ST_DISABLE);
+  gyro_ctx.mdelay(50);
+  
+  // 4. Calculate absolute differences
+  diff_x = selftest_data[0] - normal_data[0];
+  diff_y = selftest_data[1] - normal_data[1];
+  diff_z = selftest_data[2] - normal_data[2];
+  
+  if (diff_x < 0) diff_x = -diff_x;
+  if (diff_y < 0) diff_y = -diff_y;
+  if (diff_z < 0) diff_z = -diff_z;
+  
+  sprintf(msg, "Delta: X=%d Y=%d Z=%d\r\n", diff_x, diff_y, diff_z);
+  i3g4250d_platform_print(msg);
+  
+  // 5. Validate against datasheet limits
+  if ((diff_x < SELF_TEST_MIN_LSB || diff_x > SELF_TEST_MAX_LSB) ||
+      (diff_y < SELF_TEST_MIN_LSB || diff_y > SELF_TEST_MAX_LSB) ||
+      (diff_z < SELF_TEST_MIN_LSB || diff_z > SELF_TEST_MAX_LSB)) {
+    i3g4250d_platform_print("SELF-TEST FAILED - Sensor faulty\r\n\r\n");
+    return -1;
+  }
+  
+  i3g4250d_platform_print("SELF-TEST PASSED - Sensor OK\r\n\r\n");
+  return 0;
+}
+
 
 /* USER CODE END 0 */
 
@@ -232,17 +295,24 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  // Platform layer'ı başlat
+  // Platform layer'i başlat
   i3g4250d_platform_init(&gyro_ctx, &hspi5);
 
   // Gyroscope başlat
   int32_t status = gyro_init();
 
   if (status == 0) {
-    //  Platform-agnostic LED control
+
     i3g4250d_platform_led_on(0);  // Green LED
     
-    //  Platform-agnostic print
+    //  SELF-TEST ÇALIŞTIIR (başlangıçta bir kez)
+    if (gyro_self_test() != 0) {
+      // Self-test başarısız, red LED
+      i3g4250d_platform_led_off(0);
+      i3g4250d_platform_led_on(PROPERTY_ENABLE);
+      while(1);  // Donma (sensör arızalı!)
+    }
+
     i3g4250d_platform_print("\r\n=== GYROSCOPE INITIALIZED ===\r\n");
     
     char msg[100];
@@ -250,31 +320,34 @@ int main(void)
     i3g4250d_platform_print(msg);
     
     while(1) {
-      // Read gyroscope data
-      gyro_read(gyro_data);
+      uint8_t data_ready = 0;
       
-      gyro_dps[0] = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]) / 1000.0f;
-      gyro_dps[1] = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]) / 1000.0f;
-      gyro_dps[2] = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]) / 1000.0f;
+      // Veri hazir mi kontrol et
+      i3g4250d_flag_data_ready_get(&gyro_ctx, &data_ready);
+      
+      if (data_ready) {
+        // Yeni veri hazir, oku!
+        gyro_read(gyro_data);
+        
+        // mdps'ye çevir
+        int x_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]);
+        int y_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]);
+        int z_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]);
+        
+        // Sicaklik oku
+        i3g4250d_temperature_raw_get(&gyro_ctx, &temp_raw);
+        temp_celsius = i3g4250d_from_lsb_to_celsius((int8_t)temp_raw);
+        int temp_int = (int)temp_celsius;
+        
+        // UART'a gönder
+        sprintf(msg, "X:%d Y:%d Z:%d MDPS TEMP:%d\r\n",
+                x_mdps, y_mdps, z_mdps, temp_int);
+        i3g4250d_platform_print(msg);
 
-      // Read temperature
-      i3g4250d_temperature_raw_get(&gyro_ctx, &temp_raw);
-      temp_celsius = i3g4250d_from_lsb_to_celsius((int8_t)temp_raw);
+      }
       
-      
-      // Direkt mdps (millidegree/sec) olarak integer gönder
-      int x_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]);
-      int y_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]);
-      int z_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]);
-      int temp_int = (int)temp_celsius;
-
-      sprintf(msg, "X:%d Y:%d Z:%d MDPS TEMP:%d\r\n",
-          x_mdps, y_mdps, z_mdps, temp_int);
-              
-      i3g4250d_platform_print(msg);
-      
-      i3g4250d_platform_delay(200);
-    }
+      i3g4250d_platform_delay(100);  // Kisa delay (CPU'yu meşgul etme)
+}
   } else {  //  Error
     i3g4250d_platform_led_on(PROPERTY_ENABLE);  // Red LED
     while(1);
