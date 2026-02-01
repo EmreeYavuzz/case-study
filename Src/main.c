@@ -70,9 +70,10 @@ extern UART_HandleTypeDef huart1;
 static stmdev_ctx_t gyro_ctx;
 // Test değişkenleri
 static uint8_t whoami_id = 0;
-static int16_t gyro_data[3] = {0};  // X, Y, Z (raw değerler)
-static float gyro_dps[3] = {0};     // X, Y, Z (derece/saniye)
-
+static int16_t gyro_data[3] = {0};   // X, Y, Z (raw değerler)
+static float gyro_dps[3] = {0};      // X, Y, Z (derece/saniye)
+static uint8_t temp_raw = 0;         // Ham sıcaklık değeri
+static float temp_celsius = 0.0f;    // Sıcaklık (°C)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -132,6 +133,12 @@ static int32_t gyro_init(void)
     return -8;
   }
   
+  // 7. Test: Sıcaklık oku (opsiyonel)
+  ret = i3g4250d_temperature_raw_get(&gyro_ctx, &temp_raw);
+  if (ret != 0) {
+    return -9;  // Sıcaklık okuma hatası
+  }
+
   // 6. Kısa delay (sensör boot için)
   gyro_ctx.mdelay(100);
   
@@ -243,18 +250,26 @@ int main(void)
     i3g4250d_platform_print(msg);
     
     while(1) {
+      // Read gyroscope data
       gyro_read(gyro_data);
       
       gyro_dps[0] = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]) / 1000.0f;
       gyro_dps[1] = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]) / 1000.0f;
       gyro_dps[2] = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]) / 1000.0f;
+
+      // Read temperature
+      i3g4250d_temperature_raw_get(&gyro_ctx, &temp_raw);
+      temp_celsius = i3g4250d_from_lsb_to_celsius((int8_t)temp_raw);
+      
       
       // Direkt mdps (millidegree/sec) olarak integer gönder
       int x_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]);
       int y_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]);
       int z_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]);
+      int temp_int = (int)temp_celsius;
 
-      sprintf(msg, "X:%d  Y:%d  Z:%d MDPS\r\n", x_mdps, y_mdps, z_mdps);
+      sprintf(msg, "X:%d Y:%d Z:%d MDPS TEMP:%d\r\n",
+          x_mdps, y_mdps, z_mdps, temp_int);
               
       i3g4250d_platform_print(msg);
       

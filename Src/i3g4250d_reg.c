@@ -100,7 +100,7 @@ float_t i3g4250d_from_fs245dps_to_mdps(int16_t lsb)
 
 float_t i3g4250d_from_lsb_to_celsius(int16_t lsb)
 {
-  return ((float_t)lsb + 25.0f);
+  return (25.0f + (float_t)lsb);
 }
 
 /**
@@ -328,6 +328,12 @@ int32_t i3g4250d_temperature_raw_get(const stmdev_ctx_t *ctx, uint8_t *buff)
   * @brief  Angular rate sensor. The value is expressed as a 16-bit word in
   *         two's complement.[get]
   *
+  *  buff[0]: X_L (X low byte)
+  *  buff[1]: X_H (X high byte)
+  *  buff[2]: Y_L (Y low byte)
+  *  buff[3]: Y_H (Y high byte)
+  *  buff[4]: Z_L (Z low byte)
+  *  buff[5]: Z_H (Z high byte)
   * @param  ctx    Read / write interface definitions.(ptr)
   * @param  buff   Buffer that stores the data read.(ptr)
   * @retval        Interface status (MANDATORY: return 0 -> no Error)

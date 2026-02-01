@@ -505,6 +505,9 @@ class GyroscopeVisualizer(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.read_serial_data)
         
+        #  YENİ: Sıcaklık verisi
+        self.temperature = 0.0
+
         # Gyro data
         self.gyro_x = 0.0
         self.gyro_y = 0.0
@@ -561,12 +564,21 @@ class GyroscopeVisualizer(QMainWindow):
         self.label_x = QLabel("⬌ X: 0.00 DPS")
         self.label_y = QLabel("⬍ Y: 0.00 DPS")
         self.label_z = QLabel("↻ Z: 0.00 DPS")
+
+        # ✅ YENİ: Sıcaklık label'ı
+        self.label_temp = QLabel("🌡️ TEMP: 0.0°C")
+
         self.label_status = QLabel("⚫ Disconnected")
         
         for label in [self.label_x, self.label_y, self.label_z]:
             label.setFont(QFont("Courier New", 12, QFont.Bold))
             label.setStyleSheet("padding: 10px; background-color: #1a1a2e; color: #0cf574; border-radius: 5px; border: 2px solid #16213e;")
             data_layout.addWidget(label)
+        
+        # ✅ Sıcaklık label'ını ekle
+        self.label_temp.setFont(QFont("Courier New", 12, QFont.Bold))
+        self.label_temp.setStyleSheet("padding: 10px; background-color: #1a1a2e; color: #ff9500; border-radius: 5px; border: 2px solid #16213e;")
+        data_layout.addWidget(self.label_temp)
         
         self.label_status.setFont(QFont("Courier New", 12, QFont.Bold))
         self.label_status.setStyleSheet("padding: 10px; background-color: #1a1a2e; color: #ff6b6b; border-radius: 5px; border: 2px solid #16213e;")
@@ -701,20 +713,26 @@ class GyroscopeVisualizer(QMainWindow):
         try:
             if self.serial_port.in_waiting > 0:
                 line = self.serial_port.readline().decode('utf-8', errors='ignore').strip()
-                
-                # Parse format: "X:1234  Y:-567  Z:890 MDPS"
-                match = re.search(r'X:\s*([-\d]+)\s+Y:\s*([-\d]+)\s+Z:\s*([-\d]+)\s+MDPS', line)
-                
+
+                # Parse format: "X:1234 Y:-567 Z:890 MDPS TEMP:25"
+                match = re.search(r'X:([-\d]+)\s+Y:([-\d]+)\s+Z:([-\d]+)\s+MDPS\s+TEMP:([-\d]+)', line)
+            
                 if match:
                     # mdps'yi dps'ye çevir (1000'e böl)
                     self.gyro_x = float(match.group(1)) / 1000.0
                     self.gyro_y = float(match.group(2)) / 1000.0
                     self.gyro_z = float(match.group(3)) / 1000.0
-                    
+
+                    # ✅ YENİ: Sıcaklık al
+                    self.temperature = float(match.group(4))
+
                     # Update labels
                     self.label_x.setText(f"⬌ X: {self.gyro_x:+7.2f} DPS")
                     self.label_y.setText(f"⬍ Y: {self.gyro_y:+7.2f} DPS")
                     self.label_z.setText(f"↻ Z: {self.gyro_z:+7.2f} DPS")
+
+                    # ✅ YENİ: Sıcaklık label'ını güncelle
+                    self.label_temp.setText(f"🌡️ TEMP: {self.temperature:.1f}°C")
                     
                     # Update orientation labels
                     self.label_pitch.setText(f"Pitch: {self.gl_widget.pitch:.1f}°")
