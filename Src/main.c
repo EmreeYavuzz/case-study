@@ -46,6 +46,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+// LED pins (STM32F429-DISCO)
+#define LED_GREEN_PORT GPIOG
+#define LED_GREEN_PIN  GPIO_PIN_13
+#define LED_RED_PORT   GPIOG
+#define LED_RED_PIN    GPIO_PIN_14
+
+// UART handle (external)
+extern UART_HandleTypeDef huart1;
 
 /* USER CODE END PD */
 
@@ -96,19 +104,35 @@ static int32_t gyro_init(void)
     return -2;  // Yanlış cihaz
   }
   
-  // 2. Power-on, 100 Hz ODR, all axes enable
-  ret = i3g4250d_data_rate_set(&gyro_ctx, I3G4250D_ODR_100Hz);
+  // 2. Power-on mode (PD bit = 1) -
+  
+  ret = i3g4250d_power_mode_set(&gyro_ctx, PROPERTY_ENABLE);
   if (ret != 0) {
     return -3;
   }
+  // 3. Enable all axes (X, Y, Z)
+  ret = i3g4250d_axis_x_data_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) { return -4; }
   
-  // 3. Full-scale: ±245 dps
-  ret = i3g4250d_full_scale_set(&gyro_ctx, I3G4250D_245dps);
+  ret = i3g4250d_axis_y_data_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) { return -5; }
+  
+  ret = i3g4250d_axis_z_data_set(&gyro_ctx, PROPERTY_ENABLE);
+  if (ret != 0) { return -6; }
+  
+  // 4. Output data rate: 100 Hz
+  ret = i3g4250d_data_rate_set(&gyro_ctx, I3G4250D_ODR_100Hz);
   if (ret != 0) {
-    return -4;
+    return -7;
   }
   
-  // 4. Kısa delay (sensör boot için)
+  // 5. Full-scale: ±245 dps
+  ret = i3g4250d_full_scale_set(&gyro_ctx, I3G4250D_245dps);
+  if (ret != 0) {
+    return -8;
+  }
+  
+  // 6. Kısa delay (sensör boot için)
   gyro_ctx.mdelay(100);
   
   return 0;  // Başarılı
@@ -122,6 +146,42 @@ static int32_t gyro_init(void)
 static int32_t gyro_read(int16_t *data)
 {
   return i3g4250d_angular_rate_raw_get(&gyro_ctx, data);
+}
+
+
+/**
+ * @brief  Turn on LED
+ * @param  led_id: 0=Green, 1=Red
+ */
+void i3g4250d_platform_led_on(uint8_t led_id)
+{
+  if (led_id == PROPERTY_DISABLE) {
+    HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_SET);
+  } else if (led_id == PROPERTY_ENABLE) {
+    HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_SET);
+  }
+}
+
+/**
+ * @brief  Turn off LED
+ * @param  led_id: 0=Green, 1=Red
+ */
+void i3g4250d_platform_led_off(uint8_t led_id)
+{
+  if (led_id == PROPERTY_DISABLE) {
+    HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_RESET);
+  } else if (led_id == PROPERTY_ENABLE) {
+    HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_RESET);
+  }
+}
+
+/**
+ * @brief  Print message via UART
+ * @param  msg: Null-terminated string
+ */
+void i3g4250d_platform_print(const char *msg)
+{
+  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 }
 
 /* USER CODE END 0 */
@@ -172,10 +232,10 @@ int main(void)
   int32_t status = gyro_init();
 
   if (status == 0) {
-    // ✅ Platform-agnostic LED control
+    //  Platform-agnostic LED control
     i3g4250d_platform_led_on(0);  // Green LED
     
-    // ✅ Platform-agnostic print
+    //  Platform-agnostic print
     i3g4250d_platform_print("\r\n=== GYROSCOPE INITIALIZED ===\r\n");
     
     char msg[100];
@@ -189,20 +249,19 @@ int main(void)
       gyro_dps[1] = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]) / 1000.0f;
       gyro_dps[2] = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]) / 1000.0f;
       
-      int x_int = (int)(gyro_dps[0] * 100);
-      int y_int = (int)(gyro_dps[1] * 100);
-      int z_int = (int)(gyro_dps[2] * 100);
+      // Direkt mdps (millidegree/sec) olarak integer gönder
+      int x_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[0]);
+      int y_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[1]);
+      int z_mdps = i3g4250d_from_fs245dps_to_mdps(gyro_data[2]);
 
-      sprintf(msg, "X:%4d.%02d  Y:%4d.%02d  Z:%4d.%02d DPS\r\n",
-              x_int/100, x_int%100,
-              y_int/100, y_int%100,
-              z_int/100, z_int%100);
+      sprintf(msg, "X:%d  Y:%d  Z:%d MDPS\r\n", x_mdps, y_mdps, z_mdps);
+              
       i3g4250d_platform_print(msg);
       
       i3g4250d_platform_delay(200);
     }
-  } else {  // ❌ Error
-    i3g4250d_platform_led_on(1);  // Red LED
+  } else {  //  Error
+    i3g4250d_platform_led_on(PROPERTY_ENABLE);  // Red LED
     while(1);
   }
 
@@ -274,16 +333,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-
-// Printf SWV için redirect
-int _write(int file, char *ptr, int len)
-{
-  for(int i = 0; i < len; i++) {
-    ITM_SendChar((*ptr++));
-  }
-  return len;
-}
 
 /* USER CODE END 4 */
 

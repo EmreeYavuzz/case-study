@@ -1,0 +1,25 @@
+# requirements.txt
+PyQt5>=5.15.0
+PyOpenGL>=3.1.5
+pyserial>=3.5
+numpy>=1.21.0
+,
+
+# STM32F429 Discovery - Gyroscope 3D Visualizer
+
+Real-time 3D visualization of STM32F429 Discovery board orientation using gyroscope data.
+
+## Features
+- 3D representation of STM32F429 Discovery board
+- Real-time orientation updates from I3G4250D gyroscope
+- UART communication (COM13, 115200 baud)
+- Visual feedback with gyroscope data display
+
+## Installation
+
+1. Install Python 3.8 or higher
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+
+

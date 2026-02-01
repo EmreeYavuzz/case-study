@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    i3g4250d_reg.h
-  * @author  Emre Yavuz
+  * @author  Sensors Software Solution Team
   * @brief   This file contains all the functions prototypes for the
   *          i3g4250d_reg.c driver.
   ******************************************************************************
@@ -182,251 +182,135 @@ typedef struct
   *
   */
 
-/**
- * @brief Generate a bit mask with bit @p n set.
- *
- * This macro is used to define single-bit fields in registers
- * in a readable and portable way.
- *
- * Example:
- *   BIT(3) -> 0b00001000
- */
-#define BIT(n)                          (1U << (n))
 
-/**
- * @brief Prepare a value for insertion into a multi-bit register field.
- *
- * This macro shifts the given value to the field position
- * and applies the corresponding mask.
- *
- * This implementation is fully portable and does not rely
- * on compiler-specific built-ins.
- *
- * @param mask Bit mask defining the target field.
- * @param pos  Bit position of the field LSB.
- * @param val  Value to be written into the field.
- */
-#define FIELD_PREP(mask, pos, val)  ((((uint8_t)(val)) << (pos)) & (mask))
-
-/**
- * @brief Extract a value from a multi-bit register field.
- *
- * This macro masks and right-shifts a register value
- * to obtain the raw field value.
- *
- * @param mask Bit mask defining the target field.
- * @param pos  Bit position of the field LSB.
- * @param reg  Register value.
- * @return     Extracted field value.
- */
-#define FIELD_GET(mask, pos, reg) ((((uint8_t)(reg) & (mask)) >> (pos)))
-
-
-/**
- * @brief CTRL_REG1 (0x20)
- * Main control register.
- *
- * This register configures the main operating mode of the gyroscope,
- * including output data rate, bandwidth, power state, and axis enabling.
- *
- * Bit mapping (datasheet):
- *  bit7: DR1   - Output data rate selection
- *  bit6: DR0   - Output data rate selection
- *  bit5: BW1   - Bandwidth selection
- *  bit4: BW0   - Bandwidth selection
- *  bit3: PD    - Power-down control (0: power-down, 1: normal mode)
- *  bit2: ZEN   - Z-axis enable
- *  bit1: YEN   - Y-axis enable
- *  bit0: XEN   - X-axis enable
- */
 #define I3G4250D_CTRL_REG1               0x20U
-
-/* Output Data Rate (DR[1:0]) */
-#define I3G4250D_CTRL1_DR_POS            6U
-#define I3G4250D_CTRL1_DR_MASK           (0x3U << I3G4250D_CTRL1_DR_POS)
-
-/* Bandwidth (BW[1:0]) */
-#define I3G4250D_CTRL1_BW_POS            4U
-#define I3G4250D_CTRL1_BW_MASK           (0x3U << I3G4250D_CTRL1_BW_POS)
-
-/* Power and axis enable bits */
-#define I3G4250D_CTRL1_PD_BIT            BIT(3)
-#define I3G4250D_CTRL1_ZEN_BIT           BIT(2)
-#define I3G4250D_CTRL1_YEN_BIT           BIT(1)
-#define I3G4250D_CTRL1_XEN_BIT           BIT(0)
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t pd                        : 4; /* xen yen zen pd */
+  uint8_t bw                        : 2;
+  uint8_t dr                        : 2;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t dr                        : 2;
+  uint8_t bw                        : 2;
+  uint8_t pd                        : 4; /* xen yen zen pd */
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_ctrl_reg1_t;
 
 
 
-/**
- * @brief CTRL_REG2 (0x21)
- * High-pass filter configuration register.
- *
- * This register controls the operating mode and cutoff frequency
- * of the internal high-pass filter applied to the angular rate data.
- *
- * Bit mapping (datasheet):
- *  bit7: NOT USED
- *  bit6: NOT USED
- *  bit5: HPM1  - High-pass filter mode selection
- *  bit4: HPM0  - High-pass filter mode selection
- *  bit3: HPCF3 - High-pass filter cutoff frequency
- *  bit2: HPCF2 - High-pass filter cutoff frequency
- *  bit1: HPCF1 - High-pass filter cutoff frequency
- *  bit0: HPCF0 - High-pass filter cutoff frequency
- */
+
+
+
+
 #define I3G4250D_CTRL_REG2               0x21U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t hpcf                      : 4;
+  uint8_t hpm                       : 2;
+  uint8_t not_used_01               : 2;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t not_used_01               : 2;
+  uint8_t hpm                       : 2;
+  uint8_t hpcf                      : 4;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_ctrl_reg2_t;
 
-/* High-pass filter mode (HPM[1:0]) */
-#define I3G4250D_CTRL2_HPM_POS           4U
-#define I3G4250D_CTRL2_HPM_MASK          (0x3U << I3G4250D_CTRL2_HPM_POS)
-
-/* High-pass filter cutoff frequency (HPCF[3:0]) */
-#define I3G4250D_CTRL2_HPCF_POS          0U
-#define I3G4250D_CTRL2_HPCF_MASK         (0xFU << I3G4250D_CTRL2_HPCF_POS)
-
-                                         
-
-/**
- * @brief CTRL_REG3 (0x22)
- * Interrupt pin configuration register.
- *
- * This register controls which events are routed to INT1 and INT2 pins
- * and defines the electrical behavior of interrupt pins.
- *
- * Bit mapping (datasheet):
- *  bit7: I1_INT1   - Enable INT1 interrupt on INT1 pin
- *  bit6: I1_BOOT   - Enable boot status on INT1 pin
- *  bit5: H_LACTIVE - Interrupt active level (0: high, 1: low)
- *  bit4: PP_OD     - Push-pull / open-drain selection
- *  bit3: I2_DRDY   - Data-ready interrupt on INT2
- *  bit2: I2_WTM    - FIFO watermark interrupt on INT2
- *  bit1: I2_ORUN   - FIFO overrun interrupt on INT2
- *  bit0: I2_EMPTY  - FIFO empty interrupt on INT2
- */
 #define I3G4250D_CTRL_REG3               0x22U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t i2_empty                  : 1;
+  uint8_t i2_orun                   : 1;
+  uint8_t i2_wtm                    : 1;
+  uint8_t i2_drdy                   : 1;
+  uint8_t pp_od                     : 1;
+  uint8_t h_lactive                 : 1;
+  uint8_t i1_boot                   : 1;
+  uint8_t i1_int1                   : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t i1_int1                   : 1;
+  uint8_t i1_boot                   : 1;
+  uint8_t h_lactive                 : 1;
+  uint8_t pp_od                     : 1;
+  uint8_t i2_drdy                   : 1;
+  uint8_t i2_wtm                    : 1;
+  uint8_t i2_orun                   : 1;
+  uint8_t i2_empty                  : 1;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_ctrl_reg3_t;
 
-#define I3G4250D_CTRL3_I1_INT1_BIT       BIT(7)
-#define I3G4250D_CTRL3_I1_BOOT_BIT       BIT(6)
-#define I3G4250D_CTRL3_H_LACTIVE_BIT     BIT(5)
-#define I3G4250D_CTRL3_PP_OD_BIT         BIT(4)
-#define I3G4250D_CTRL3_I2_DRDY_BIT       BIT(3)
-#define I3G4250D_CTRL3_I2_WTM_BIT        BIT(2)
-#define I3G4250D_CTRL3_I2_ORUN_BIT       BIT(1)
-#define I3G4250D_CTRL3_I2_EMPTY_BIT      BIT(0)
-
-
-/**
- * @brief CTRL_REG4 (0x23)
- * Interface and full-scale configuration register.
- *
- * This register configures the measurement range, data endianness,
- * self-test mode, and SPI interface mode.
- *
- * Bit mapping (datasheet):
- *  bit7: NOT USED
- *  bit6: BLE   - Big/Little Endian data selection
- *  bit5: FS1   - Full-scale selection
- *  bit4: FS0   - Full-scale selection
- *  bit3: NOT USED
- *  bit2: ST1   - Self-test enable
- *  bit1: ST0   - Self-test enable
- *  bit0: SIM   - SPI interface mode selection
- */
 #define I3G4250D_CTRL_REG4               0x23U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t sim                       : 1;
+  uint8_t st                        : 2;
+  uint8_t not_used_01               : 1;
+  uint8_t fs                        : 2;
+  uint8_t ble                       : 1;
+  uint8_t not_used_02               : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t not_used_02               : 1;
+  uint8_t ble                       : 1;
+  uint8_t fs                        : 2;
+  uint8_t not_used_01               : 1;
+  uint8_t st                        : 2;
+  uint8_t sim                       : 1;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_ctrl_reg4_t;
 
-#define I3G4250D_CTRL4_BLE_BIT           BIT(6)
-
-/* Full-scale selection (FS[1:0]) */
-#define I3G4250D_CTRL4_FS_POS            4U
-#define I3G4250D_CTRL4_FS_MASK           (0x3U << I3G4250D_CTRL4_FS_POS)
-
-/* Self-test enable (ST[1:0]) */
-#define I3G4250D_CTRL4_ST_POS            1U
-#define I3G4250D_CTRL4_ST_MASK           (0x3U << I3G4250D_CTRL4_ST_POS)
-
-#define I3G4250D_CTRL4_SIM_BIT           BIT(0)
-
-
-
-
-/**
- * @brief CTRL_REG5 (0x24)
- * FIFO, reboot memory and HP filter enable register.
- *
- * Bit mapping (datasheet):
- *  bit7: BOOT      - Reboot memory content
- *  bit6: FIFO_EN  - FIFO enable
- *  bit5: NOT USED
- *  bit4: HPEN     - High-pass filter enable
- *  bit3: INT1_SEL1
- *  bit2: INT1_SEL0
- *  bit1: OUT_SEL1
- *  bit0: OUT_SEL0
- */
 #define I3G4250D_CTRL_REG5               0x24U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t out_sel                   : 2;
+  uint8_t int1_sel                  : 2;
+  uint8_t hpen                      : 1;
+  uint8_t not_used_01               : 1;
+  uint8_t fifo_en                   : 1;
+  uint8_t boot                      : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t boot                      : 1;
+  uint8_t fifo_en                   : 1;
+  uint8_t not_used_01               : 1;
+  uint8_t hpen                      : 1;
+  uint8_t int1_sel                  : 2;
+  uint8_t out_sel                   : 2;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_ctrl_reg5_t;
 
-#define I3G4250D_CTRL5_BOOT_BIT          BIT(7)
-#define I3G4250D_CTRL5_FIFO_EN_BIT       BIT(6)
-#define I3G4250D_CTRL5_HPEN_BIT          BIT(4)
-
-/* INT1 selection configuration (INT1_SEL[1:0]) */
-#define I3G4250D_CTRL5_INT1_SEL_POS      2U
-#define I3G4250D_CTRL5_INT1_SEL_MASK     (0x3U << I3G4250D_CTRL5_INT1_SEL_POS)
-
-/* Out selection configuration (OUT_SEL[1:0]) */
-#define I3G4250D_CTRL5_OUT_SEL_POS       0U
-#define I3G4250D_CTRL5_OUT_SEL_MASK      (0x3U << I3G4250D_CTRL5_OUT_SEL_POS)
-
-
-
-/**
- * @brief REFERENCE (0x25)
- * Reference value for HP filter.
- */
 #define I3G4250D_REFERENCE               0x25U
+typedef struct
+{
+  uint8_t ref                       : 8;
+} i3g4250d_reference_t;
 
-
-/**
- * @brief OUT_TEMP (0x26)
- * Temperature output register.
- *
- * This register contains the raw temperature data measured
- * by the internal temperature sensor.
- *
- * The temperature value is provided for monitoring purposes
- * and is not intended for precise temperature measurement.
- */
 #define I3G4250D_OUT_TEMP                0x26U
-
-
-/**
- * @brief STATUS_REG (0x27)
- * Data availability and overrun status register.
- *
- * Bit mapping:
- *  bit7: ZYXOR  - X/Y/Z overrun
- *  bit6: ZOR    - Z overrun
- *  bit5: YOR    - Y overrun
- *  bit4: XOR    - X overrun
- *  bit3: ZYXDA  - X/Y/Z new data available
- *  bit2: ZDA    - Z new data available
- *  bit1: YDA    - Y new data available
- *  bit0: XDA    - X new data available
- */
 #define I3G4250D_STATUS_REG              0x27U
-
-#define I3G4250D_STATUS_XDA_BIT          BIT(0)
-#define I3G4250D_STATUS_YDA_BIT          BIT(1)
-#define I3G4250D_STATUS_ZDA_BIT          BIT(2)
-#define I3G4250D_STATUS_ZYXDA_BIT        BIT(3)
-
-#define I3G4250D_STATUS_XOR_BIT          BIT(4)
-#define I3G4250D_STATUS_YOR_BIT          BIT(5)
-#define I3G4250D_STATUS_ZOR_BIT          BIT(6)
-#define I3G4250D_STATUS_ZYXOR_BIT        BIT(7)
-
-
-
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t xda                       : 1;
+  uint8_t yda                       : 1;
+  uint8_t zda                       : 1;
+  uint8_t zyxda                     : 1;
+  uint8_t _xor                      : 1;
+  uint8_t yor                       : 1;
+  uint8_t zor                       : 1;
+  uint8_t zyxor                     : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t zyxor                     : 1;
+  uint8_t zor                       : 1;
+  uint8_t yor                       : 1;
+  uint8_t _xor                      : 1;
+  uint8_t zyxda                     : 1;
+  uint8_t zda                       : 1;
+  uint8_t yda                       : 1;
+  uint8_t xda                       : 1;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_status_reg_t;
 
 #define I3G4250D_OUT_X_L                 0x28U
 #define I3G4250D_OUT_X_H                 0x29U
@@ -434,199 +318,201 @@ typedef struct
 #define I3G4250D_OUT_Y_H                 0x2BU
 #define I3G4250D_OUT_Z_L                 0x2CU
 #define I3G4250D_OUT_Z_H                 0x2DU
-
-/**
- * @brief FIFO_CTRL_REG (0x2E)
- * FIFO control register.
- *
- * Bit mapping:
- *  bit7-5: FM[2:0]  - FIFO mode selection
- *  bit4-0: WTM[4:0] - FIFO watermark level (0-31)
- */
 #define I3G4250D_FIFO_CTRL_REG           0x2EU
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t wtm                       : 5;
+  uint8_t fm                        : 3;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t fm                        : 3;
+  uint8_t wtm                       : 5;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_fifo_ctrl_reg_t;
 
-/* FIFO watermark level (WTM[4:0]) */
-#define I3G4250D_FIFO_CTRL_WTM_POS       0U
-#define I3G4250D_FIFO_CTRL_WTM_MASK      (0x1FU << I3G4250D_FIFO_CTRL_WTM_POS)
-
-/* FIFO mode selection (FM[2:0]) */
-#define I3G4250D_FIFO_CTRL_FM_POS        5U
-#define I3G4250D_FIFO_CTRL_FM_MASK       (0x7U << I3G4250D_FIFO_CTRL_FM_POS)
-
-/**
- * @brief FIFO_SRC_REG (0x2F)
- * FIFO source register.
- *
- * Bit mapping:
- *  bit7: WTM   - Watermark status (1: FIFO >= watermark level)
- *  bit6: OVRN  - Overrun status (1: FIFO is full)
- *  bit5: EMPTY - FIFO empty bit (1: FIFO is empty)
- *  bit4-0: FSS[4:0] - FIFO stored data level (0-32)
- */
 #define I3G4250D_FIFO_SRC_REG            0x2FU
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t fss                       : 5;
+  uint8_t empty                     : 1;
+  uint8_t ovrn                      : 1;
+  uint8_t wtm                       : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t wtm                       : 1;
+  uint8_t ovrn                      : 1;
+  uint8_t empty                     : 1;
+  uint8_t fss                       : 5;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_fifo_src_reg_t;
 
-/* FIFO stored data level (FSS[4:0]) */
-#define I3G4250D_FIFO_SRC_FSS_POS        0U
-#define I3G4250D_FIFO_SRC_FSS_MASK       (0x1FU << I3G4250D_FIFO_SRC_FSS_POS)
-
-#define I3G4250D_FIFO_SRC_EMPTY_BIT      BIT(5)
-#define I3G4250D_FIFO_SRC_OVRN_BIT       BIT(6)
-#define I3G4250D_FIFO_SRC_WTM_BIT        BIT(7)
-
-/**
- * @brief INT1_CFG (0x30)
- * Interrupt 1 configuration register.
- *
- * Bit mapping:
- *  bit7: AND/OR - AND/OR combination of interrupt events
- *  bit6: LIR    - Latch interrupt request
- *  bit5: ZHIE   - Enable interrupt on Z high event
- *  bit4: ZLIE   - Enable interrupt on Z low event
- *  bit3: YHIE   - Enable interrupt on Y high event
- *  bit2: YLIE   - Enable interrupt on Y low event
- *  bit1: XHIE   - Enable interrupt on X high event
- *  bit0: XLIE   - Enable interrupt on X low event
- */
 #define I3G4250D_INT1_CFG                0x30U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t xlie                      : 1;
+  uint8_t xhie                      : 1;
+  uint8_t ylie                      : 1;
+  uint8_t yhie                      : 1;
+  uint8_t zlie                      : 1;
+  uint8_t zhie                      : 1;
+  uint8_t lir                       : 1;
+  uint8_t and_or                    : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t and_or                    : 1;
+  uint8_t lir                       : 1;
+  uint8_t zhie                      : 1;
+  uint8_t zlie                      : 1;
+  uint8_t yhie                      : 1;
+  uint8_t ylie                      : 1;
+  uint8_t xhie                      : 1;
+  uint8_t xlie                      : 1;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_int1_cfg_t;
 
-#define I3G4250D_INT1_CFG_XLIE_BIT       BIT(0)
-#define I3G4250D_INT1_CFG_XHIE_BIT       BIT(1)
-#define I3G4250D_INT1_CFG_YLIE_BIT       BIT(2)
-#define I3G4250D_INT1_CFG_YHIE_BIT       BIT(3)
-#define I3G4250D_INT1_CFG_ZLIE_BIT       BIT(4)
-#define I3G4250D_INT1_CFG_ZHIE_BIT       BIT(5)
-#define I3G4250D_INT1_CFG_LIR_BIT        BIT(6)
-#define I3G4250D_INT1_CFG_AND_OR_BIT     BIT(7)
-
-/* INT1_CFG as uint8_t typedef for direct register access */
-typedef uint8_t i3g4250d_int1_cfg_t;
-
-/**
- * @brief INT1_SRC (0x31)
- * Interrupt 1 source register.
- *
- * Bit mapping:
- *  bit7: NOT USED
- *  bit6: IA - Interrupt active (one or more interrupts generated)
- *  bit5: ZH - Z high event occurred
- *  bit4: ZL - Z low event occurred
- *  bit3: YH - Y high event occurred
- *  bit2: YL - Y low event occurred
- *  bit1: XH - X high event occurred
- *  bit0: XL - X low event occurred
- */
 #define I3G4250D_INT1_SRC                0x31U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t xl                        : 1;
+  uint8_t xh                        : 1;
+  uint8_t yl                        : 1;
+  uint8_t yh                        : 1;
+  uint8_t zl                        : 1;
+  uint8_t zh                        : 1;
+  uint8_t ia                        : 1;
+  uint8_t not_used_01               : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t not_used_01               : 1;
+  uint8_t ia                        : 1;
+  uint8_t zh                        : 1;
+  uint8_t zl                        : 1;
+  uint8_t yh                        : 1;
+  uint8_t yl                        : 1;
+  uint8_t xh                        : 1;
+  uint8_t xl                        : 1;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_int1_src_t;
 
-#define I3G4250D_INT1_SRC_XL_BIT         BIT(0)
-#define I3G4250D_INT1_SRC_XH_BIT         BIT(1)
-#define I3G4250D_INT1_SRC_YL_BIT         BIT(2)
-#define I3G4250D_INT1_SRC_YH_BIT         BIT(3)
-#define I3G4250D_INT1_SRC_ZL_BIT         BIT(4)
-#define I3G4250D_INT1_SRC_ZH_BIT         BIT(5)
-#define I3G4250D_INT1_SRC_IA_BIT         BIT(6)
-
-/* INT1_SRC as uint8_t typedef for direct register access */
-typedef uint8_t i3g4250d_int1_src_t;
-
-/**
- * @brief INT1_TSH_XH (0x32)
- * Interrupt 1 threshold X-axis high byte.
- *
- * Bit mapping:
- *  bit7: NOT USED
- *  bit6-0: THSX[14:8] - X-axis threshold high byte
- */
 #define I3G4250D_INT1_TSH_XH             0x32U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t thsx                      : 7;
+  uint8_t not_used_01               : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t not_used_01               : 1;
+  uint8_t thsx                      : 7;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_int1_tsh_xh_t;
 
-/* X-axis threshold high byte (THSX[14:8]) */
-#define I3G4250D_INT1_TSH_XH_POS         0U
-#define I3G4250D_INT1_TSH_XH_MASK        (0x7FU << I3G4250D_INT1_TSH_XH_POS)
-
-/**
- * @brief INT1_TSH_XL (0x33)
- * Interrupt 1 threshold X-axis low byte.
- *
- * Bit mapping:
- *  bit7-0: THSX[7:0] - X-axis threshold low byte (full 8-bit value)
- */
 #define I3G4250D_INT1_TSH_XL             0x33U
+typedef struct
+{
+  uint8_t thsx                      : 8;
+} i3g4250d_int1_tsh_xl_t;
 
-/**
- * @brief INT1_TSH_YH (0x34)
- * Interrupt 1 threshold Y-axis high byte.
- *
- * Bit mapping:
- *  bit7: NOT USED
- *  bit6-0: THSY[14:8] - Y-axis threshold high byte
- */
 #define I3G4250D_INT1_TSH_YH             0x34U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t thsy                      : 7;
+  uint8_t not_used_01               : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t not_used_01               : 1;
+  uint8_t thsy                      : 7;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_int1_tsh_yh_t;
 
-/* Y-axis threshold high byte (THSY[14:8]) */
-#define I3G4250D_INT1_TSH_YH_POS         0U
-#define I3G4250D_INT1_TSH_YH_MASK        (0x7FU << I3G4250D_INT1_TSH_YH_POS)
-
-/**
- * @brief INT1_TSH_YL (0x35)
- * Interrupt 1 threshold Y-axis low byte.
- *
- * Bit mapping:
- *  bit7-0: THSY[7:0] - Y-axis threshold low byte (full 8-bit value)
- */
 #define I3G4250D_INT1_TSH_YL             0x35U
+typedef struct
+{
+  uint8_t thsy                      : 8;
+} i3g4250d_int1_tsh_yl_t;
 
-/**
- * @brief INT1_TSH_ZH (0x36)
- * Interrupt 1 threshold Z-axis high byte.
- *
- * Bit mapping:
- *  bit7: NOT USED
- *  bit6-0: THSZ[14:8] - Z-axis threshold high byte
- */
 #define I3G4250D_INT1_TSH_ZH             0x36U
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t thsz                      : 7;
+  uint8_t not_used_01               : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t not_used_01               : 1;
+  uint8_t thsz                      : 7;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_int1_tsh_zh_t;
 
-/* Z-axis threshold high byte (THSZ[14:8]) */
-#define I3G4250D_INT1_TSH_ZH_POS         0U
-#define I3G4250D_INT1_TSH_ZH_MASK        (0x7FU << I3G4250D_INT1_TSH_ZH_POS)
-
-/**
- * @brief INT1_TSH_ZL (0x37)
- * Interrupt 1 threshold Z-axis low byte.
- *
- * Bit mapping:
- *  bit7-0: THSZ[7:0] - Z-axis threshold low byte (full 8-bit value)
- */
 #define I3G4250D_INT1_TSH_ZL             0x37U
+typedef struct
+{
+  uint8_t thsz                      : 8;
+} i3g4250d_int1_tsh_zl_t;
 
-/**
- * @brief INT1_DURATION (0x38)
- * Interrupt 1 duration register.
- *
- * Bit mapping:
- *  bit7: WAIT - Wait enable (0: disabled, 1: enabled)
- *  bit6-0: D[6:0] - Duration value (0-127)
- */
 #define I3G4250D_INT1_DURATION           0x38U
-
-/* Duration value (D[6:0]) */
-#define I3G4250D_INT1_DURATION_D_POS     0U
-#define I3G4250D_INT1_DURATION_D_MASK    (0x7FU << I3G4250D_INT1_DURATION_D_POS)
-
-#define I3G4250D_INT1_DURATION_WAIT_BIT  BIT(7)
-
-
-
+typedef struct
+{
+#if DRV_BYTE_ORDER == DRV_LITTLE_ENDIAN
+  uint8_t d                         : 7;
+  uint8_t wait                      : 1;
+#elif DRV_BYTE_ORDER == DRV_BIG_ENDIAN
+  uint8_t wait                      : 1;
+  uint8_t d                         : 7;
+#endif /* DRV_BYTE_ORDER */
+} i3g4250d_int1_duration_t;
 
 /**
-  * @note  Bitfield structures have been removed in favor of mask-based
-  *        register access for better portability and MISRA-C compliance.
-  *        Use BIT() macros and FIELD_PREP/FIELD_GET for register manipulation.
+  * @defgroup LSM9DS1_Register_Union
+  * @brief    This union group all the registers having a bit-field
+  *           description.
+  *           This union is useful but it's not needed by the driver.
+  *
+  *           REMOVING this union you are compliant with:
+  *           MISRA-C 2012 [Rule 19.2] -> " Union are not allowed "
+  *
+  * @{
+  *
   */
+
+typedef union
+{
+  i3g4250d_ctrl_reg1_t        ctrl_reg1;
+  i3g4250d_ctrl_reg2_t        ctrl_reg2;
+  i3g4250d_ctrl_reg3_t        ctrl_reg3;
+  i3g4250d_ctrl_reg4_t        ctrl_reg4;
+  i3g4250d_ctrl_reg5_t        ctrl_reg5;
+  i3g4250d_reference_t        reference;
+  i3g4250d_status_reg_t       status_reg;
+  i3g4250d_fifo_ctrl_reg_t    fifo_ctrl_reg;
+  i3g4250d_fifo_src_reg_t     fifo_src_reg;
+  i3g4250d_int1_cfg_t         int1_cfg;
+  i3g4250d_int1_src_t         int1_src;
+  i3g4250d_int1_tsh_xh_t      int1_tsh_xh;
+  i3g4250d_int1_tsh_xl_t      int1_tsh_xl;
+  i3g4250d_int1_tsh_yh_t      int1_tsh_yh;
+  i3g4250d_int1_tsh_yl_t      int1_tsh_yl;
+  i3g4250d_int1_tsh_zh_t      int1_tsh_zh;
+  i3g4250d_int1_tsh_zl_t      int1_tsh_zl;
+  i3g4250d_int1_duration_t    int1_duration;
+  bitwise_t                   bitwise;
+  uint8_t                     byte;
+} i3g4250d_reg_t;
+
+/**
+  * @}
+  *
+  */
+
+#ifndef __weak
+#define __weak __attribute__((weak))
+#endif /* __weak */
 
 /*
  * These are the basic platform dependent I/O routines to read
  * and write device registers connected on a standard bus.
  * The driver keeps offering a default implementation based on function
  * pointers to read/write routines for backward compatibility.
+ * The __weak directive allows the final application to overwrite
+ * them with a custom implementation.
  */
 
 int32_t i3g4250d_read_reg(const stmdev_ctx_t *ctx, uint8_t reg,
@@ -648,26 +534,14 @@ int32_t i3g4250d_axis_y_data_get(const stmdev_ctx_t *ctx, uint8_t *val);
 int32_t i3g4250d_axis_z_data_set(const stmdev_ctx_t *ctx, uint8_t val);
 int32_t i3g4250d_axis_z_data_get(const stmdev_ctx_t *ctx, uint8_t *val);
 
-/**
- * @brief Power mode control
- * Controls the PD bit (bit3) in CTRL_REG1
- */
-int32_t i3g4250d_power_mode_set(const stmdev_ctx_t *ctx, uint8_t val);
-int32_t i3g4250d_power_mode_get(const stmdev_ctx_t *ctx, uint8_t *val);
-
-/**
- * @brief Output data rate selection (DR[1:0] field)
- * Field values for CTRL_REG1 bits [7:6]
- * 
- * Note: Power mode (PD bit) must be set separately via i3g4250d_power_mode_set()
- *       Axis enable must be set separately via i3g4250d_axis_x/y/z_data_set()
- */
 typedef enum
 {
-  I3G4250D_ODR_100Hz   = 0,   /* DR[1:0] = 00 */
-  I3G4250D_ODR_200Hz   = 1,   /* DR[1:0] = 01 */
-  I3G4250D_ODR_400Hz   = 2,   /* DR[1:0] = 10 */
-  I3G4250D_ODR_800Hz   = 3,   /* DR[1:0] = 11 */
+  I3G4250D_ODR_OFF     = 0x00,
+  I3G4250D_ODR_SLEEP   = 0x08,
+  I3G4250D_ODR_100Hz   = 0x0F,
+  I3G4250D_ODR_200Hz   = 0x1F,
+  I3G4250D_ODR_400Hz   = 0x2F,
+  I3G4250D_ODR_800Hz   = 0x3F,
 } i3g4250d_dr_t;
 int32_t i3g4250d_data_rate_set(const stmdev_ctx_t *ctx, i3g4250d_dr_t val);
 int32_t i3g4250d_data_rate_get(const stmdev_ctx_t *ctx, i3g4250d_dr_t *val);
@@ -683,7 +557,7 @@ int32_t i3g4250d_full_scale_get(const stmdev_ctx_t *ctx,
                                 i3g4250d_fs_t *val);
 
 int32_t i3g4250d_status_reg_get(const stmdev_ctx_t *ctx,
-                                uint8_t *val);
+                                i3g4250d_status_reg_t *val);
 
 int32_t i3g4250d_flag_data_ready_get(const stmdev_ctx_t *ctx, uint8_t *val);
 
@@ -794,31 +668,23 @@ typedef enum
 int32_t i3g4250d_spi_mode_set(const stmdev_ctx_t *ctx, i3g4250d_sim_t val);
 int32_t i3g4250d_spi_mode_get(const stmdev_ctx_t *ctx, i3g4250d_sim_t *val);
 
-/**
- * @brief INT1 pin routing configuration (mask-based)
- * Use bitwise OR to combine multiple routing options
- */
-typedef uint8_t i3g4250d_int1_route_t;
-
-#define I3G4250D_INT1_ROUTE_INT1  BIT(7)  /* INT1 interrupt on INT1 pin */
-#define I3G4250D_INT1_ROUTE_BOOT  BIT(6)  /* Boot status on INT1 pin */
-
+typedef struct
+{
+  uint8_t i1_int1             : 1;
+  uint8_t i1_boot             : 1;
+} i3g4250d_int1_route_t;
 int32_t i3g4250d_pin_int1_route_set(const stmdev_ctx_t *ctx,
                                     i3g4250d_int1_route_t val);
 int32_t i3g4250d_pin_int1_route_get(const stmdev_ctx_t *ctx,
                                     i3g4250d_int1_route_t *val);
 
-/**
- * @brief INT2 pin routing configuration (mask-based)
- * Use bitwise OR to combine multiple routing options
- */
-typedef uint8_t i3g4250d_int2_route_t;
-
-#define I3G4250D_INT2_ROUTE_EMPTY BIT(0)  /* FIFO empty interrupt on INT2 */
-#define I3G4250D_INT2_ROUTE_ORUN  BIT(1)  /* FIFO overrun interrupt on INT2 */
-#define I3G4250D_INT2_ROUTE_WTM   BIT(2)  /* FIFO watermark interrupt on INT2 */
-#define I3G4250D_INT2_ROUTE_DRDY  BIT(3)  /* Data ready interrupt on INT2 */
-
+typedef struct
+{
+  uint8_t i2_empty             : 1;
+  uint8_t i2_orun              : 1;
+  uint8_t i2_wtm               : 1;
+  uint8_t i2_drdy              : 1;
+} i3g4250d_int2_route_t;
 int32_t i3g4250d_pin_int2_route_set(const stmdev_ctx_t *ctx,
                                     i3g4250d_int2_route_t val);
 int32_t i3g4250d_pin_int2_route_get(const stmdev_ctx_t *ctx,
@@ -855,7 +721,7 @@ int32_t i3g4250d_int_notification_get(const stmdev_ctx_t *ctx,
                                       i3g4250d_lir_t *val);
 
 int32_t i3g4250d_int_on_threshold_conf_set(const stmdev_ctx_t *ctx,
-                                           i3g4250d_int1_cfg_t val);
+                                           i3g4250d_int1_cfg_t *val);
 int32_t i3g4250d_int_on_threshold_conf_get(const stmdev_ctx_t *ctx,
                                            i3g4250d_int1_cfg_t *val);
 

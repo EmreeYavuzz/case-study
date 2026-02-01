@@ -16,9 +16,4 @@ int32_t i3g4250d_platform_read(void *handle, uint8_t reg,
 
 void i3g4250d_platform_delay(uint32_t ms);
 
-// ✅ Debug/UI helper functions (HEADER'A EKLE)
-void i3g4250d_platform_led_on(uint8_t led_id);
-void i3g4250d_platform_led_off(uint8_t led_id);
-void i3g4250d_platform_print(const char *msg);
-
 #endif

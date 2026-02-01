@@ -38,8 +38,7 @@ Src/i3g4250d_platform_stm32.o: ../Src/i3g4250d_platform_stm32.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_hcd.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h ../Inc/gpio.h \
- ../Inc/usart.h
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h ../Inc/gpio.h
 ../Inc/i3g4250d_platform.h:
 ../Inc/i3g4250d_reg.h:
 ../Inc/spi.h:
@@ -84,4 +83,3 @@ Src/i3g4250d_platform_stm32.o: ../Src/i3g4250d_platform_stm32.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_hcd.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:
 ../Inc/gpio.h:
-../Inc/usart.h:

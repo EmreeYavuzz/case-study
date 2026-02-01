@@ -1,8 +1,9 @@
-../Drivers/CMSIS/Include/core_cm4.h:2064:26:ITM_SendChar	4
-../Src/main.c:85:16:gyro_init	5
-../Src/main.c:122:16:gyro_read	1
-../Src/main.c:133:5:main	2
-../Src/main.c:235:6:SystemClock_Config	3
-../Src/main.c:280:5:_write	2
-../Src/main.c:298:6:HAL_TIM_PeriodElapsedCallback	2
-../Src/main.c:316:6:Error_Handler	1
+../Src/main.c:93:16:gyro_init	9
+../Src/main.c:146:16:gyro_read	1
+../Src/main.c:156:6:i3g4250d_platform_led_on	3
+../Src/main.c:169:6:i3g4250d_platform_led_off	3
+../Src/main.c:182:6:i3g4250d_platform_print	1
+../Src/main.c:193:5:main	2
+../Src/main.c:294:6:SystemClock_Config	3
+../Src/main.c:347:6:HAL_TIM_PeriodElapsedCallback	2
+../Src/main.c:365:6:Error_Handler	1
